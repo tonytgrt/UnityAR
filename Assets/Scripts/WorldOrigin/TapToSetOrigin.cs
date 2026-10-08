@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using UnityEngine.XR.Interaction.Toolkit.Interactors.Casters;
 
 namespace UnityAR
 {
     /// <summary>
-    /// Moves the <see cref="WorldOrigin"/> to where an interactor's beam hits a detected AR plane when the
-    /// user taps.
+    /// Moves the <see cref="WorldOrigin"/> to where an interactor's beam hits a detected surface when the
+    /// user taps. Detected surfaces are anything AR Foundation places under the XR Origin's trackables
+    /// parent, such as environment meshes from an <c>ARMeshManager</c> and <c>ARPlane</c>s.
     /// </summary>
     /// <remarks>
     /// The phone controller's tap is its trigger, which the XRI default input actions bind to Activate;
@@ -39,8 +39,10 @@ namespace UnityAR
                 if (interactor == null || !interactor.isActiveAndEnabled || !WasTapped(interactor))
                     continue;
 
-                if (TryGetPlaneHit(interactor, out var point))
+                if (TryGetSurfaceHit(interactor, out var point))
                     m_WorldOrigin.SetOrigin(point);
+                else
+                    Debug.Log("[WorldOrigin] Tap ignored: beam is not on a detected surface");
             }
         }
 
@@ -50,7 +52,7 @@ namespace UnityAR
                 interactor.selectInput.ReadWasPerformedThisFrame();
         }
 
-        bool TryGetPlaneHit(NearFarInteractor interactor, out Vector3 point)
+        bool TryGetSurfaceHit(NearFarInteractor interactor, out Vector3 point)
         {
             point = default;
             if (!(interactor.farInteractionCaster is CurveInteractionCaster caster))
@@ -62,11 +64,16 @@ namespace UnityAR
 
             // Hits are sorted nearest first, so this is where the beam stops.
             var hit = m_Hits[0];
-            if (hit.collider.GetComponentInParent<ARPlane>() == null)
+            if (!IsDetectedSurface(hit.collider))
                 return false;
 
             point = hit.point;
             return true;
+        }
+
+        bool IsDetectedSurface(Collider collider)
+        {
+            return collider.transform.IsChildOf(m_WorldOrigin.xrOrigin.TrackablesParent);
         }
     }
 }
