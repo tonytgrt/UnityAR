@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Unity.XR.CoreUtils;
 using Unity.XR.XREAL;
 using Unity.XR.XREAL.Samples;
 using UnityEngine;
@@ -11,12 +10,12 @@ using UnityEngine.XR.ARFoundation;
 namespace UnityAR
 {
     /// <summary>
-    /// Saves the live environment mesh to one file per scan target and places saved meshes back into the room.
+    /// Saves the live environment mesh to one file per anchor and places saved meshes back into the room.
     /// </summary>
     /// <remarks>
-    /// Meshes are stored relative to an anchor pose in session space (the XR Origin's trackables parent), so
-    /// moving the world origin does not affect them. The live mesh comes from XREAL meshing, split by
-    /// classification label by <see cref="MeshClassificationFracking"/>.
+    /// Meshes are stored in the local space of the anchor they belong to, and a loaded mesh is shown as a
+    /// child of that anchor, so it follows the anchor as XREAL refines its pose. The live mesh comes from XREAL
+    /// meshing, split by classification label by <see cref="MeshClassificationFracking"/>.
     /// </remarks>
     public class RoomMeshStore : MonoBehaviour
     {
@@ -29,9 +28,6 @@ namespace UnityAR
 
         const string k_FolderName = "RoomMeshes";
         const string k_FileExtension = ".roommesh";
-
-        [SerializeField]
-        XROrigin m_XROrigin;
 
         [SerializeField]
         ARMeshManager m_MeshManager;
@@ -48,6 +44,7 @@ namespace UnityAR
         Material m_DefaultMaterial;
 
         readonly List<GameObject> m_LoadedMeshes = new List<GameObject>();
+        readonly Dictionary<MeshFilter, NRMeshingVertexSemanticLabel> m_LoadedLabels = new Dictionary<MeshFilter, NRMeshingVertexSemanticLabel>();
         readonly List<int> m_Triangles = new List<int>();
         readonly List<Vector3> m_Vertices = new List<Vector3>();
         readonly List<Vector3> m_Normals = new List<Vector3>();
@@ -63,52 +60,81 @@ namespace UnityAR
         public bool isLiveScanning => m_MeshManager.enabled;
 
         /// <summary>
-        /// Number of triangles in the live mesh.
+        /// Number of triangles in the current mesh: the live mesh while scanning, otherwise the loaded mesh.
         /// </summary>
-        public int liveTriangleCount
+        public int currentTriangleCount
         {
             get
             {
                 var count = 0;
-                foreach (var block in m_Classification.MeshFrackingMap.Values)
+                foreach (var pair in GetCurrentMesh())
                 {
-                    foreach (var filter in block.Values)
-                    {
-                        if (filter != null && filter.sharedMesh != null && filter.sharedMesh.subMeshCount > 0)
-                            count += (int)filter.sharedMesh.GetIndexCount(0) / 3;
-                    }
+                    if (pair.Key.sharedMesh.subMeshCount > 0)
+                        count += (int)pair.Key.sharedMesh.GetIndexCount(0) / 3;
                 }
                 return count;
             }
         }
 
         /// <summary>
-        /// Whether a room mesh has been saved for the scan target.
+        /// Whether a room mesh has been saved for the anchor.
         /// </summary>
-        public bool HasSavedMesh(string targetName) => File.Exists(GetPath(targetName));
+        public bool HasSavedMesh(string anchorId) => File.Exists(GetPath(anchorId));
 
         /// <summary>
-        /// Saves the live mesh for the scan target, replacing any mesh saved for it before.
+        /// When the room mesh for the anchor was last saved.
         /// </summary>
-        /// <param name="targetName">The scan target the mesh belongs to.</param>
-        /// <param name="anchor">The scan target's anchor pose in session space.</param>
+        public DateTime GetSaveTime(string anchorId) => File.GetLastWriteTimeUtc(GetPath(anchorId));
+
+        /// <summary>
+        /// Deletes the room mesh saved for the anchor, if any.
+        /// </summary>
+        public void Delete(string anchorId) => File.Delete(GetPath(anchorId));
+
+        /// <summary>
+        /// Saves the current mesh and the world origin for the anchor, replacing anything saved for it before.
+        /// </summary>
+        /// <remarks>
+        /// The current mesh is the live mesh while scanning, otherwise the loaded mesh.
+        /// </remarks>
+        /// <param name="anchorId">The persistent ID of the anchor the mesh belongs to.</param>
+        /// <param name="anchor">The anchor's transform.</param>
         /// <returns>The saved mesh.</returns>
-        public RoomMeshData Save(string targetName, Pose anchor)
+        public RoomMeshData Save(string anchorId, Transform anchor)
         {
-            var data = CaptureLiveMesh(targetName, anchor);
-            RoomMeshFile.Write(GetPath(targetName), data);
+            var data = new RoomMeshData
+            {
+                anchorId = anchorId,
+                savedAtUtc = DateTime.UtcNow,
+                // The world origin is the identity pose in world space.
+                originPose = new Pose(anchor.InverseTransformPoint(Vector3.zero), Quaternion.Inverse(anchor.rotation)),
+            };
+
+            var worldToAnchor = anchor.worldToLocalMatrix;
+            foreach (var pair in GetCurrentMesh())
+            {
+                var filter = pair.Key;
+                var piece = ExtractPiece(filter.sharedMesh, worldToAnchor * filter.transform.localToWorldMatrix);
+                if (piece == null)
+                    continue;
+
+                piece.label = (byte)pair.Value;
+                data.pieces.Add(piece);
+            }
+
+            RoomMeshFile.Write(GetPath(anchorId), data);
             return data;
         }
 
         /// <summary>
-        /// Loads the mesh saved for the scan target and shows it in place of the live mesh, which stops scanning.
+        /// Loads the mesh saved for the anchor and shows it in place of the live mesh, which stops scanning.
         /// </summary>
-        /// <param name="targetName">The scan target the mesh belongs to.</param>
-        /// <param name="anchor">The scan target's current anchor pose in session space.</param>
-        /// <returns>The loaded mesh.</returns>
-        public RoomMeshData Load(string targetName, Pose anchor)
+        /// <param name="anchorId">The persistent ID of the anchor the mesh belongs to.</param>
+        /// <param name="anchor">The anchor's transform, which the loaded mesh is attached to.</param>
+        /// <returns>The loaded mesh, including the saved world origin relative to the anchor.</returns>
+        public RoomMeshData Load(string anchorId, Transform anchor)
         {
-            var data = RoomMeshFile.Read(GetPath(targetName));
+            var data = RoomMeshFile.Read(GetPath(anchorId));
             ClearLoadedMeshes();
             m_LoadedMeshes.Add(Spawn(data, anchor));
             SetLiveScanning(false);
@@ -126,9 +152,9 @@ namespace UnityAR
 
         void OnDestroy() => ClearLoadedMeshes();
 
-        static string GetPath(string targetName)
+        static string GetPath(string anchorId)
         {
-            var fileName = targetName;
+            var fileName = anchorId;
             foreach (var invalid in Path.GetInvalidFileNameChars())
                 fileName = fileName.Replace(invalid, '_');
             return Path.Combine(folderPath, fileName + k_FileExtension);
@@ -155,29 +181,28 @@ namespace UnityAR
             }
         }
 
-        RoomMeshData CaptureLiveMesh(string targetName, Pose anchor)
+        // The mesh filters of the current mesh with their classification labels.
+        IEnumerable<KeyValuePair<MeshFilter, NRMeshingVertexSemanticLabel>> GetCurrentMesh()
         {
-            var data = new RoomMeshData { targetName = targetName, savedAtUtc = DateTime.UtcNow };
-            var worldToAnchor = Matrix4x4.TRS(anchor.position, anchor.rotation, Vector3.one).inverse *
-                m_XROrigin.TrackablesParent.worldToLocalMatrix;
-
-            foreach (var block in m_Classification.MeshFrackingMap.Values)
+            if (isLiveScanning)
             {
-                foreach (var pair in block)
+                foreach (var block in m_Classification.MeshFrackingMap.Values)
                 {
-                    var filter = pair.Value;
-                    if (filter == null || filter.sharedMesh == null)
-                        continue;
-
-                    var piece = ExtractPiece(filter.sharedMesh, worldToAnchor * filter.transform.localToWorldMatrix);
-                    if (piece == null)
-                        continue;
-
-                    piece.label = (byte)pair.Key;
-                    data.pieces.Add(piece);
+                    foreach (var pair in block)
+                    {
+                        if (pair.Value != null && pair.Value.sharedMesh != null)
+                            yield return new KeyValuePair<MeshFilter, NRMeshingVertexSemanticLabel>(pair.Value, pair.Key);
+                    }
                 }
             }
-            return data;
+            else
+            {
+                foreach (var pair in m_LoadedLabels)
+                {
+                    if (pair.Key != null && pair.Key.sharedMesh != null)
+                        yield return pair;
+                }
+            }
         }
 
         RoomMeshPiece ExtractPiece(Mesh mesh, Matrix4x4 meshToAnchor)
@@ -222,13 +247,12 @@ namespace UnityAR
             };
         }
 
-        GameObject Spawn(RoomMeshData data, Pose anchor)
+        GameObject Spawn(RoomMeshData data, Transform anchor)
         {
-            // Under the trackables parent, the mesh stays fixed in the room when the world origin moves, and
-            // TapToSetOrigin treats it as a detected surface.
-            var root = new GameObject($"Saved Room Mesh ({data.targetName})");
-            root.transform.SetParent(m_XROrigin.TrackablesParent, false);
-            root.transform.SetLocalPositionAndRotation(anchor.position, anchor.rotation);
+            // Anchors live under the trackables parent, so the mesh stays fixed in the room when the world origin
+            // moves, and BeamRaycast treats it as a detected surface.
+            var root = new GameObject("Saved Room Mesh");
+            root.transform.SetParent(anchor, false);
 
             foreach (var piece in data.pieces)
             {
@@ -245,9 +269,11 @@ namespace UnityAR
 
                 var pieceObject = new GameObject(mesh.name);
                 pieceObject.transform.SetParent(root.transform, false);
-                pieceObject.AddComponent<MeshFilter>().sharedMesh = mesh;
+                var filter = pieceObject.AddComponent<MeshFilter>();
+                filter.sharedMesh = mesh;
                 pieceObject.AddComponent<MeshRenderer>().sharedMaterial = GetMaterial(label);
                 pieceObject.AddComponent<MeshCollider>().sharedMesh = mesh;
+                m_LoadedLabels[filter] = label;
             }
             return root;
         }
@@ -273,6 +299,7 @@ namespace UnityAR
                 Destroy(root);
             }
             m_LoadedMeshes.Clear();
+            m_LoadedLabels.Clear();
         }
     }
 }

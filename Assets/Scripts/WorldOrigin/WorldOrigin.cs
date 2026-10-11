@@ -4,10 +4,11 @@ using UnityEngine;
 namespace UnityAR
 {
     /// <summary>
-    /// Keeps a chosen physical point at Unity world position (0, 0, 0).
+    /// Keeps a chosen physical point at Unity world position (0, 0, 0), optionally with a chosen heading as the
+    /// world's forward direction.
     /// </summary>
     /// <remarks>
-    /// The XR Origin is shifted rather than the content: the camera, controllers and detected planes all
+    /// The XR Origin is moved rather than the content: the camera, controllers and detected geometry all
     /// live under it, so they stay consistent with the real world while the world origin moves to the
     /// chosen point. Anything placed at world coordinates is therefore positioned relative to that point.
     /// </remarks>
@@ -32,17 +33,31 @@ namespace UnityAR
         }
 
         /// <summary>
-        /// Makes the physical point currently at <paramref name="worldPoint"/> the new world origin.
+        /// Makes the physical point currently at <paramref name="worldPoint"/> the new world origin, keeping the
+        /// directions of the world axes.
         /// </summary>
         /// <param name="worldPoint">The point in current world space that becomes (0, 0, 0).</param>
-        public void SetOrigin(Vector3 worldPoint)
+        public void SetOrigin(Vector3 worldPoint) => SetOrigin(new Pose(worldPoint, Quaternion.identity));
+
+        /// <summary>
+        /// Makes the physical pose currently at <paramref name="worldPose"/> the new world origin: its position
+        /// becomes (0, 0, 0) and its heading becomes the world's forward (+Z) direction.
+        /// </summary>
+        /// <remarks>
+        /// Only the heading of the rotation is used, so the world stays level with gravity.
+        /// </remarks>
+        /// <param name="worldPose">The pose in current world space that becomes the origin.</param>
+        public void SetOrigin(Pose worldPose)
         {
-            m_XROrigin.Origin.transform.position -= worldPoint;
+            var heading = Quaternion.Euler(0f, worldPose.rotation.eulerAngles.y, 0f);
+            var toNewWorld = Quaternion.Inverse(heading);
+            var origin = m_XROrigin.Origin.transform;
+            origin.SetPositionAndRotation(toNewWorld * (origin.position - worldPose.position), toNewWorld * origin.rotation);
 
             // The XR Origin carries a CharacterController, so push the move to physics immediately.
             Physics.SyncTransforms();
 
-            Debug.Log($"[WorldOrigin] Moved world origin by {worldPoint:F3}; XR Origin now at {m_XROrigin.Origin.transform.position:F3}");
+            Debug.Log($"[WorldOrigin] New origin at {worldPose.position:F3} with heading {heading.eulerAngles.y:F1}; XR Origin now at {origin.position:F3}");
         }
     }
 }

@@ -22,8 +22,12 @@ namespace UnityAR
         float m_DropBelowCenter = 0.2f;
 
         [SerializeField]
-        [Tooltip("How long each message stays visible, in seconds.")]
+        [Tooltip("Minimum time each message stays visible, in seconds. Longer messages stay up long enough to read.")]
         float m_Duration = 4f;
+
+        [SerializeField]
+        [Tooltip("Reading speed used to keep longer messages up, in characters per second.")]
+        float m_ReadingSpeed = 15f;
 
         TextMeshPro m_Text;
         float m_HideTime;
@@ -36,7 +40,7 @@ namespace UnityAR
             Debug.Log($"[Status] {message}");
             m_Text.text = message;
             m_Text.enabled = true;
-            m_HideTime = Time.time + m_Duration;
+            m_HideTime = Time.time + Mathf.Max(m_Duration, message.Length / m_ReadingSpeed);
         }
 
         void Awake()

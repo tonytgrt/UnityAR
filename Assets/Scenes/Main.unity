@@ -340,7 +340,7 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 7698955068414132531, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 68358322}
+      addedObject: {fileID: 68358327}
   m_SourcePrefab: {fileID: 100100000, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
 --- !u!114 &68358318 stripped
 MonoBehaviour:
@@ -368,7 +368,7 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7698955068414132528, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
   m_PrefabInstance: {fileID: 68358317}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &68358322
+--- !u!114 &68358327
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -377,15 +377,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 68358320}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4dea56a9eaadd1c439095de4f9a371cb, type: 3}
+  m_Script: {fileID: 11500000, guid: 728ad7fae8e460a4ba41265c7308d757, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.ARTrackedImageManager
+  m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.ARAnchorManager
   <trackablesChanged>k__BackingField:
     m_PersistentCalls:
       m_Calls: []
-  m_SerializedLibrary: {fileID: 11400000, guid: e70e9d0955613430c9e74d8ef50b6917, type: 2}
-  m_MaxNumberOfMovingImages: 0
-  m_TrackedImagePrefab: {fileID: 0}
+  m_AnchorPrefab: {fileID: 0}
 --- !u!1 &250438010
 GameObject:
   m_ObjectHideFlags: 0
@@ -511,6 +509,7 @@ MonoBehaviour:
   m_Distance: 1.2
   m_DropBelowCenter: 0.2
   m_Duration: 4
+  m_ReadingSpeed: 15
 --- !u!114 &359046051
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -553,7 +552,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -684,7 +683,9 @@ GameObject:
   m_Component:
   - component: {fileID: 920319683}
   - component: {fileID: 920319682}
-  - component: {fileID: 920319681}
+  - component: {fileID: 920319685}
+  - component: {fileID: 920319684}
+  - component: {fileID: 920319686}
   m_Layer: 0
   m_Name: Room Mesh
   m_TagString: Untagged
@@ -692,25 +693,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &920319681
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 920319680}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a6d55382e45ee485c80908affe00fda1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.ScanTargetTracker
-  m_XROrigin: {fileID: 68358318}
-  m_TrackedImageManager: {fileID: 68358322}
-  m_Store: {fileID: 920319682}
-  m_Status: {fileID: 359046050}
-  m_OutlineMaterial: {fileID: 2100000, guid: 1fcd011b1fc7748baaec0fac1b3817b7, type: 2}
-  m_SettleTime: 0.6
-  m_KeepAnchorLevel: 1
 --- !u!114 &920319682
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -723,7 +705,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 59612b98160bf401286b3eaefdd943dd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityAR.RoomMeshStore
-  m_XROrigin: {fileID: 68358318}
   m_MeshManager: {fileID: 250438013}
   m_Classification: {fileID: 250438012}
   m_LabelMaterials:
@@ -763,6 +744,64 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &920319684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920319680}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c671ce54b5f7942b1975583fc472ffce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.ItemAnchorController
+  m_XROrigin: {fileID: 68358318}
+  m_AnchorManager: {fileID: 68358327}
+  m_WorldOrigin: {fileID: 1367636612}
+  m_Store: {fileID: 920319682}
+  m_Status: {fileID: 359046050}
+  m_MappingGuide: {fileID: 920319685}
+  m_CaptureFrame: {fileID: 920319686}
+  m_Interactors: []
+  m_RequiredGoodDirections: 3
+  m_MappingTimeout: 60
+--- !u!114 &920319685
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920319680}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77c1efd91d7034b68b9520502a30cc7f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.AnchorMappingGuide
+  m_LineMaterial: {fileID: 2100000, guid: 1fcd011b1fc7748baaec0fac1b3817b7, type: 2}
+  m_UnvisitedColor: {r: 0.35, g: 0.35, b: 0.35, a: 1}
+  m_InsufficientColor: {r: 1, g: 0.3, b: 0.25, a: 1}
+  m_SufficientColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  m_GoodColor: {r: 0.35, g: 1, b: 0.35, a: 1}
+  m_PinColor: {r: 0.3, g: 0.85, b: 1, a: 1}
+--- !u!114 &920319686
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920319680}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e80afe4d005d44c3980936585fcd4c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.CaptureFrame
+  m_Camera: {fileID: 68358319}
+  m_LineMaterial: {fileID: 2100000, guid: 1fcd011b1fc7748baaec0fac1b3817b7, type: 2}
+  m_HorizontalAngle: 20
+  m_VerticalAngle: 15
+  m_Distance: 1
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &1367636610
 GameObject:
   m_ObjectHideFlags: 0
@@ -773,7 +812,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1367636613}
   - component: {fileID: 1367636612}
-  - component: {fileID: 1367636611}
   m_Layer: 0
   m_Name: World Origin
   m_TagString: Untagged
@@ -781,20 +819,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1367636611
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1367636610}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 391f0c3d6bfa749afa795cf0e217edae, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.TapToSetOrigin
-  m_WorldOrigin: {fileID: 1367636612}
-  m_Interactors: []
 --- !u!114 &1367636612
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -840,7 +864,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1387653214
 MonoBehaviour:
   m_ObjectHideFlags: 0

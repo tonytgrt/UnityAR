@@ -13,7 +13,7 @@ namespace UnityAR
         /// <summary>The <c>NRMeshingVertexSemanticLabel</c> of these triangles.</summary>
         public byte label;
 
-        /// <summary>Vertex positions, relative to the scan target the mesh was saved with.</summary>
+        /// <summary>Vertex positions, relative to the anchor the mesh was saved with.</summary>
         public Vector3[] vertices;
 
         /// <summary>Vertex normals in the same space as <see cref="vertices"/>, or null if the mesh had none.</summary>
@@ -24,16 +24,19 @@ namespace UnityAR
     }
 
     /// <summary>
-    /// A room mesh stored relative to a scan target, so it can be placed again wherever that target is
-    /// recognized in a later session.
+    /// A room mesh and world origin stored relative to an anchor, so both can be placed again wherever that
+    /// anchor is recognized in a later session.
     /// </summary>
     public class RoomMeshData
     {
-        /// <summary>The reference image name of the scan target the mesh belongs to.</summary>
-        public string targetName;
+        /// <summary>The persistent ID of the anchor the mesh belongs to.</summary>
+        public string anchorId;
 
         /// <summary>When the mesh was saved.</summary>
         public DateTime savedAtUtc;
+
+        /// <summary>The world origin's pose relative to the anchor when the mesh was saved.</summary>
+        public Pose originPose = Pose.identity;
 
         /// <summary>The mesh pieces.</summary>
         public readonly List<RoomMeshPiece> pieces = new List<RoomMeshPiece>();
@@ -57,7 +60,7 @@ namespace UnityAR
     public static class RoomMeshFile
     {
         const uint k_Magic = 0x4D52_4155; // "UARM"
-        const int k_Version = 1;
+        const int k_Version = 2;
 
         /// <summary>
         /// Writes <paramref name="data"/> to <paramref name="path"/>, replacing any existing file.
@@ -72,8 +75,14 @@ namespace UnityAR
             {
                 writer.Write(k_Magic);
                 writer.Write(k_Version);
-                writer.Write(data.targetName ?? string.Empty);
+                writer.Write(data.anchorId ?? string.Empty);
                 writer.Write(data.savedAtUtc.ToBinary());
+                WriteVector(writer, data.originPose.position);
+                var rotation = data.originPose.rotation;
+                writer.Write(rotation.x);
+                writer.Write(rotation.y);
+                writer.Write(rotation.z);
+                writer.Write(rotation.w);
                 writer.Write(data.pieces.Count);
                 foreach (var piece in data.pieces)
                 {
@@ -109,8 +118,11 @@ namespace UnityAR
 
             var data = new RoomMeshData
             {
-                targetName = reader.ReadString(),
+                anchorId = reader.ReadString(),
                 savedAtUtc = DateTime.FromBinary(reader.ReadInt64()),
+                originPose = new Pose(
+                    ReadVector(reader),
+                    new Quaternion(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle())),
             };
             var pieceCount = reader.ReadInt32();
             for (var i = 0; i < pieceCount; i++)
@@ -130,19 +142,27 @@ namespace UnityAR
         {
             writer.Write(vectors.Length);
             foreach (var v in vectors)
-            {
-                writer.Write(v.x);
-                writer.Write(v.y);
-                writer.Write(v.z);
-            }
+                WriteVector(writer, v);
         }
 
         static Vector3[] ReadVectors(BinaryReader reader)
         {
             var vectors = new Vector3[reader.ReadInt32()];
             for (var i = 0; i < vectors.Length; i++)
-                vectors[i] = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                vectors[i] = ReadVector(reader);
             return vectors;
+        }
+
+        static void WriteVector(BinaryWriter writer, Vector3 v)
+        {
+            writer.Write(v.x);
+            writer.Write(v.y);
+            writer.Write(v.z);
+        }
+
+        static Vector3 ReadVector(BinaryReader reader)
+        {
+            return new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
         }
     }
 }
