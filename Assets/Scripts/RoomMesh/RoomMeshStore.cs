@@ -100,17 +100,27 @@ namespace UnityAR
         /// <param name="anchorId">The persistent ID of the anchor the mesh belongs to.</param>
         /// <param name="anchor">The anchor's transform.</param>
         /// <returns>The saved mesh.</returns>
-        public RoomMeshData Save(string anchorId, Transform anchor)
+        public RoomMeshData Save(string anchorId, Transform anchor) =>
+            Save(anchorId, new Pose(anchor.position, anchor.rotation));
+
+        /// <summary>
+        /// Saves the current mesh and the world origin relative to a pose, replacing anything saved under the key.
+        /// </summary>
+        /// <param name="anchorId">The key the mesh is saved under.</param>
+        /// <param name="anchor">The world-space pose the mesh and origin are stored relative to.</param>
+        /// <returns>The saved mesh.</returns>
+        public RoomMeshData Save(string anchorId, Pose anchor)
         {
+            var anchorRotation = Quaternion.Inverse(anchor.rotation);
             var data = new RoomMeshData
             {
                 anchorId = anchorId,
                 savedAtUtc = DateTime.UtcNow,
                 // The world origin is the identity pose in world space.
-                originPose = new Pose(anchor.InverseTransformPoint(Vector3.zero), Quaternion.Inverse(anchor.rotation)),
+                originPose = new Pose(anchorRotation * -anchor.position, anchorRotation),
             };
 
-            var worldToAnchor = anchor.worldToLocalMatrix;
+            var worldToAnchor = Matrix4x4.TRS(anchor.position, anchor.rotation, Vector3.one).inverse;
             foreach (var pair in GetCurrentMesh())
             {
                 var filter = pair.Key;
@@ -132,11 +142,20 @@ namespace UnityAR
         /// <param name="anchorId">The persistent ID of the anchor the mesh belongs to.</param>
         /// <param name="anchor">The anchor's transform, which the loaded mesh is attached to.</param>
         /// <returns>The loaded mesh, including the saved world origin relative to the anchor.</returns>
-        public RoomMeshData Load(string anchorId, Transform anchor)
+        public RoomMeshData Load(string anchorId, Transform anchor) => Load(anchorId, anchor, Pose.identity);
+
+        /// <summary>
+        /// Loads the mesh saved under the key and shows it in place of the live mesh, which stops scanning.
+        /// </summary>
+        /// <param name="anchorId">The key the mesh was saved under.</param>
+        /// <param name="parent">The transform the loaded mesh is attached to.</param>
+        /// <param name="anchorInParent">The pose the mesh was saved relative to, in <paramref name="parent"/>'s space.</param>
+        /// <returns>The loaded mesh, including the saved world origin relative to the anchor.</returns>
+        public RoomMeshData Load(string anchorId, Transform parent, Pose anchorInParent)
         {
             var data = RoomMeshFile.Read(GetPath(anchorId));
             ClearLoadedMeshes();
-            m_LoadedMeshes.Add(Spawn(data, anchor));
+            m_LoadedMeshes.Add(Spawn(data, parent, anchorInParent));
             SetLiveScanning(false);
             return data;
         }
@@ -247,12 +266,13 @@ namespace UnityAR
             };
         }
 
-        GameObject Spawn(RoomMeshData data, Transform anchor)
+        GameObject Spawn(RoomMeshData data, Transform parent, Pose anchorInParent)
         {
-            // Anchors live under the trackables parent, so the mesh stays fixed in the room when the world origin
-            // moves, and BeamRaycast treats it as a detected surface.
+            // The parent is an anchor or the trackables parent itself, both under the XR Origin, so the mesh stays
+            // fixed in the room when the world origin moves, and BeamRaycast treats it as a detected surface.
             var root = new GameObject("Saved Room Mesh");
-            root.transform.SetParent(anchor, false);
+            root.transform.SetParent(parent, false);
+            root.transform.SetLocalPositionAndRotation(anchorInParent.position, anchorInParent.rotation);
 
             foreach (var piece in data.pieces)
             {

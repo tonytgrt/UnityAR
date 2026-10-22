@@ -341,6 +341,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7698955068414132531, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 68358327}
+    - targetCorrespondingSourceObject: {fileID: 7698955068414132531, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 68358328}
   m_SourcePrefab: {fileID: 100100000, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
 --- !u!114 &68358318 stripped
 MonoBehaviour:
@@ -384,6 +387,24 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_AnchorPrefab: {fileID: 0}
+--- !u!114 &68358328
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 68358320}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4dea56a9eaadd1c439095de4f9a371cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.ARTrackedImageManager
+  <trackablesChanged>k__BackingField:
+    m_PersistentCalls:
+      m_Calls: []
+  m_SerializedLibrary: {fileID: 11400000, guid: e70e9d0955613430c9e74d8ef50b6917, type: 2}
+  m_MaxNumberOfMovingImages: 0
+  m_TrackedImagePrefab: {fileID: 0}
 --- !u!1 &250438010
 GameObject:
   m_ObjectHideFlags: 0
@@ -686,6 +707,8 @@ GameObject:
   - component: {fileID: 920319685}
   - component: {fileID: 920319684}
   - component: {fileID: 920319686}
+  - component: {fileID: 920319688}
+  - component: {fileID: 920319687}
   m_Layer: 0
   m_Name: Room Mesh
   m_TagString: Untagged
@@ -802,6 +825,40 @@ MonoBehaviour:
   m_VerticalAngle: 15
   m_Distance: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &920319687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920319680}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3af2d9dd05f5347258026fe37f4ea523, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.PhoneControllerButtons
+  m_ImageTargets: {fileID: 920319688}
+  m_ItemAnchors: {fileID: 920319684}
+  m_Store: {fileID: 920319682}
+--- !u!114 &920319688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920319680}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8cf8ba357ec72408e9c2a89407895078, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.ImageTargetController
+  m_XROrigin: {fileID: 68358318}
+  m_TrackedImageManager: {fileID: 68358328}
+  m_WorldOrigin: {fileID: 1367636612}
+  m_Store: {fileID: 920319682}
+  m_Status: {fileID: 359046050}
+  m_OutlineMaterial: {fileID: 2100000, guid: 1fcd011b1fc7748baaec0fac1b3817b7, type: 2}
+  m_SettleTime: 0.6
 --- !u!1 &1367636610
 GameObject:
   m_ObjectHideFlags: 0

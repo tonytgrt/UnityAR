@@ -196,16 +196,25 @@ namespace UnityAR
 
         void OnAppButton()
         {
+            if (!m_Store.isLiveScanning && !m_Capturing)
+                Rescan();
+            else
+                ToggleFindTaggedItem();
+        }
+
+        /// <summary>
+        /// Whether the capture frame is shown and saved tagged items are being looked for.
+        /// </summary>
+        public bool isFindingTaggedItem => m_Capturing;
+
+        /// <summary>
+        /// Starts looking for saved tagged items through the capture frame, or stops looking.
+        /// </summary>
+        public void ToggleFindTaggedItem()
+        {
             if (m_MappingAnchor != null || m_Saving)
             {
                 m_Status.Show("Finish tagging the item first, or tap somewhere else to start over.");
-                return;
-            }
-
-            if (!m_Store.isLiveScanning)
-            {
-                m_Store.ResumeLiveScanning();
-                m_Status.Show("Rescanning the room. Tap an item to save the room with it, or press APP to look for a tagged item.");
                 return;
             }
 
@@ -213,6 +222,21 @@ namespace UnityAR
                 StopCapture("Stopped looking for tagged items.");
             else
                 StartCapture();
+        }
+
+        /// <summary>
+        /// Discards any loaded room mesh and resumes building the live mesh.
+        /// </summary>
+        public void Rescan()
+        {
+            if (m_Store.isLiveScanning)
+            {
+                m_Status.Show("Already scanning the room.");
+                return;
+            }
+
+            m_Store.ResumeLiveScanning();
+            m_Status.Show("Rescanning the room. Tap an item to save the room with it, or look for a saved item or image.");
         }
 
         async void StartCapture()
