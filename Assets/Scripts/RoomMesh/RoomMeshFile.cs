@@ -13,7 +13,7 @@ namespace UnityAR
         /// <summary>The <c>NRMeshingVertexSemanticLabel</c> of these triangles.</summary>
         public byte label;
 
-        /// <summary>Vertex positions, relative to the anchor the mesh was saved with.</summary>
+        /// <summary>Vertex positions, relative to the scan image the room was saved to.</summary>
         public Vector3[] vertices;
 
         /// <summary>Vertex normals in the same space as <see cref="vertices"/>, or null if the mesh had none.</summary>
@@ -24,22 +24,37 @@ namespace UnityAR
     }
 
     /// <summary>
-    /// A room mesh and world origin stored relative to an anchor, so both can be placed again wherever that
-    /// anchor is recognized in a later session.
+    /// A cube placed in the room.
+    /// </summary>
+    public struct SavedCube
+    {
+        /// <summary>The cube's center and rotation, relative to the scan image the room was saved to.</summary>
+        public Pose pose;
+
+        /// <summary>The length of the cube's edges, in meters.</summary>
+        public float size;
+    }
+
+    /// <summary>
+    /// A room mesh, the cubes placed in the room and the world origin, stored relative to a scan image so all of
+    /// them can be placed again wherever that image is recognized in a later session.
     /// </summary>
     public class RoomMeshData
     {
-        /// <summary>The persistent ID of the anchor the mesh belongs to.</summary>
-        public string anchorId;
+        /// <summary>The key the room was saved under.</summary>
+        public string key;
 
-        /// <summary>When the mesh was saved.</summary>
+        /// <summary>When the room was saved.</summary>
         public DateTime savedAtUtc;
 
-        /// <summary>The world origin's pose relative to the anchor when the mesh was saved.</summary>
+        /// <summary>The world origin's pose relative to the scan image when the room was saved.</summary>
         public Pose originPose = Pose.identity;
 
         /// <summary>The mesh pieces.</summary>
         public readonly List<RoomMeshPiece> pieces = new List<RoomMeshPiece>();
+
+        /// <summary>The cubes placed in the room.</summary>
+        public readonly List<SavedCube> cubes = new List<SavedCube>();
 
         /// <summary>Total number of triangles in all pieces.</summary>
         public int triangleCount
@@ -60,7 +75,10 @@ namespace UnityAR
     public static class RoomMeshFile
     {
         const uint k_Magic = 0x4D52_4155; // "UARM"
-        const int k_Version = 2;
+        const int k_Version = 3;
+
+        // Version 2 files have no cubes.
+        const int k_OldestReadableVersion = 2;
 
         /// <summary>
         /// Writes <paramref name="data"/> to <paramref name="path"/>, replacing any existing file.
@@ -75,14 +93,9 @@ namespace UnityAR
             {
                 writer.Write(k_Magic);
                 writer.Write(k_Version);
-                writer.Write(data.anchorId ?? string.Empty);
+                writer.Write(data.key ?? string.Empty);
                 writer.Write(data.savedAtUtc.ToBinary());
-                WriteVector(writer, data.originPose.position);
-                var rotation = data.originPose.rotation;
-                writer.Write(rotation.x);
-                writer.Write(rotation.y);
-                writer.Write(rotation.z);
-                writer.Write(rotation.w);
+                WritePose(writer, data.originPose);
                 writer.Write(data.pieces.Count);
                 foreach (var piece in data.pieces)
                 {
@@ -96,6 +109,12 @@ namespace UnityAR
                     foreach (var index in piece.triangles)
                         writer.Write(index);
                 }
+                writer.Write(data.cubes.Count);
+                foreach (var cube in data.cubes)
+                {
+                    WritePose(writer, cube.pose);
+                    writer.Write(cube.size);
+                }
             }
 
             if (File.Exists(path))
@@ -104,7 +123,7 @@ namespace UnityAR
         }
 
         /// <summary>
-        /// Reads a room mesh written by <see cref="Write"/>.
+        /// Reads a room mesh written by <see cref="Write"/>, including files written by older versions.
         /// </summary>
         /// <exception cref="InvalidDataException">The file is not a room mesh file or has an unsupported version.</exception>
         public static RoomMeshData Read(string path)
@@ -113,16 +132,14 @@ namespace UnityAR
             if (reader.ReadUInt32() != k_Magic)
                 throw new InvalidDataException($"{path} is not a room mesh file.");
             var version = reader.ReadInt32();
-            if (version != k_Version)
+            if (version < k_OldestReadableVersion || version > k_Version)
                 throw new InvalidDataException($"{path} has unsupported room mesh version {version}.");
 
             var data = new RoomMeshData
             {
-                anchorId = reader.ReadString(),
+                key = reader.ReadString(),
                 savedAtUtc = DateTime.FromBinary(reader.ReadInt64()),
-                originPose = new Pose(
-                    ReadVector(reader),
-                    new Quaternion(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle())),
+                originPose = ReadPose(reader),
             };
             var pieceCount = reader.ReadInt32();
             for (var i = 0; i < pieceCount; i++)
@@ -135,7 +152,30 @@ namespace UnityAR
                     piece.triangles[t] = reader.ReadInt32();
                 data.pieces.Add(piece);
             }
+
+            if (version >= 3)
+            {
+                var cubeCount = reader.ReadInt32();
+                for (var i = 0; i < cubeCount; i++)
+                    data.cubes.Add(new SavedCube { pose = ReadPose(reader), size = reader.ReadSingle() });
+            }
             return data;
+        }
+
+        static void WritePose(BinaryWriter writer, Pose pose)
+        {
+            WriteVector(writer, pose.position);
+            writer.Write(pose.rotation.x);
+            writer.Write(pose.rotation.y);
+            writer.Write(pose.rotation.z);
+            writer.Write(pose.rotation.w);
+        }
+
+        static Pose ReadPose(BinaryReader reader)
+        {
+            return new Pose(
+                ReadVector(reader),
+                new Quaternion(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()));
         }
 
         static void WriteVectors(BinaryWriter writer, Vector3[] vectors)

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace UnityAR
 {
     /// <summary>
-    /// Adds buttons for the image and tagged-item features to XREAL's phone controller screen.
+    /// Adds buttons for saving and loading the room and for managing cubes to XREAL's phone controller screen.
     /// </summary>
     /// <remarks>
     /// The buttons are created at runtime inside the phone controller's canvas, in a 2 x 2 grid between the XREAL
@@ -36,10 +36,13 @@ namespace UnityAR
         ImageTargetController m_ImageTargets;
 
         [SerializeField]
-        ItemAnchorController m_ItemAnchors;
+        RoomMeshStore m_Store;
 
         [SerializeField]
-        RoomMeshStore m_Store;
+        CubePlacer m_Cubes;
+
+        [SerializeField]
+        StatusToast m_Status;
 
         PhoneButton[] m_Buttons;
 
@@ -76,11 +79,28 @@ namespace UnityAR
                     () => m_ImageTargets.armedAction == ImageTargetController.ImageAction.Save),
                 CreateButton(panelTransform, "Load from image", 1, 0, m_ImageTargets.ToggleLoad,
                     () => m_ImageTargets.armedAction == ImageTargetController.ImageAction.Load),
-                CreateButton(panelTransform, "Find tagged item", 0, 1, m_ItemAnchors.ToggleFindTaggedItem,
-                    () => m_ItemAnchors.isFindingTaggedItem),
-                CreateButton(panelTransform, "Rescan", 1, 1, m_ItemAnchors.Rescan,
-                    () => !m_Store.isLiveScanning),
+                CreateButton(panelTransform, "Rescan", 0, 1, Rescan, () => !m_Store.isLiveScanning),
+                CreateButton(panelTransform, "Clear cubes", 1, 1, ClearCubes, () => false),
             };
+        }
+
+        void Rescan()
+        {
+            if (m_Store.isLiveScanning)
+            {
+                m_Status.Show("Already scanning the room.");
+                return;
+            }
+
+            m_Store.ResumeLiveScanning();
+            m_Status.Show("Rescanning the room. The cubes stay where they are.");
+        }
+
+        void ClearCubes()
+        {
+            var count = m_Cubes.cubes.Count;
+            m_Cubes.Clear();
+            m_Status.Show(count == 0 ? "There are no cubes to clear." : "Cleared the cubes. Rooms saved to a scan image keep theirs.");
         }
 
         static PhoneButton CreateButton(RectTransform parent, string label, int column, int row,

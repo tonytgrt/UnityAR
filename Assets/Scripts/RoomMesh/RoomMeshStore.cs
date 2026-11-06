@@ -10,12 +10,13 @@ using UnityEngine.XR.ARFoundation;
 namespace UnityAR
 {
     /// <summary>
-    /// Saves the live environment mesh to one file per anchor and places saved meshes back into the room.
+    /// Saves the room, meaning the environment mesh and the cubes placed in it, to one file per scan image, and
+    /// puts saved rooms back.
     /// </summary>
     /// <remarks>
-    /// Meshes are stored in the local space of the anchor they belong to, and a loaded mesh is shown as a
-    /// child of that anchor, so it follows the anchor as XREAL refines its pose. The live mesh comes from XREAL
-    /// meshing, split by classification label by <see cref="MeshClassificationFracking"/>.
+    /// Rooms are stored relative to the scan image's pose, so they can be placed again wherever the image is
+    /// recognized. The live mesh comes from XREAL meshing, split by classification label by
+    /// <see cref="MeshClassificationFracking"/>.
     /// </remarks>
     public class RoomMeshStore : MonoBehaviour
     {
@@ -34,6 +35,9 @@ namespace UnityAR
 
         [SerializeField]
         MeshClassificationFracking m_Classification;
+
+        [SerializeField]
+        CubePlacer m_Cubes;
 
         [SerializeField]
         [Tooltip("Material for each classification label of a loaded mesh. Match the live classified mesh prefabs.")]
@@ -77,54 +81,41 @@ namespace UnityAR
         }
 
         /// <summary>
-        /// Whether a room mesh has been saved for the anchor.
+        /// Whether there is anything to save: a mesh or placed cubes.
         /// </summary>
-        public bool HasSavedMesh(string anchorId) => File.Exists(GetPath(anchorId));
+        public bool hasContent => currentTriangleCount > 0 || m_Cubes.cubes.Count > 0;
 
         /// <summary>
-        /// When the room mesh for the anchor was last saved.
+        /// Whether a room has been saved under the key.
         /// </summary>
-        public DateTime GetSaveTime(string anchorId) => File.GetLastWriteTimeUtc(GetPath(anchorId));
+        public bool HasSavedMesh(string key) => File.Exists(GetPath(key));
 
         /// <summary>
-        /// Deletes the room mesh saved for the anchor, if any.
-        /// </summary>
-        public void Delete(string anchorId) => File.Delete(GetPath(anchorId));
-
-        /// <summary>
-        /// Saves the current mesh and the world origin for the anchor, replacing anything saved for it before.
+        /// Saves the current mesh, the placed cubes and the world origin relative to a scan image, replacing
+        /// anything saved under the key before.
         /// </summary>
         /// <remarks>
         /// The current mesh is the live mesh while scanning, otherwise the loaded mesh.
         /// </remarks>
-        /// <param name="anchorId">The persistent ID of the anchor the mesh belongs to.</param>
-        /// <param name="anchor">The anchor's transform.</param>
-        /// <returns>The saved mesh.</returns>
-        public RoomMeshData Save(string anchorId, Transform anchor) =>
-            Save(anchorId, new Pose(anchor.position, anchor.rotation));
-
-        /// <summary>
-        /// Saves the current mesh and the world origin relative to a pose, replacing anything saved under the key.
-        /// </summary>
-        /// <param name="anchorId">The key the mesh is saved under.</param>
-        /// <param name="anchor">The world-space pose the mesh and origin are stored relative to.</param>
-        /// <returns>The saved mesh.</returns>
-        public RoomMeshData Save(string anchorId, Pose anchor)
+        /// <param name="key">The key the room is saved under.</param>
+        /// <param name="image">The scan image's world-space pose, which the room is stored relative to.</param>
+        /// <returns>The saved room.</returns>
+        public RoomMeshData Save(string key, Pose image)
         {
-            var anchorRotation = Quaternion.Inverse(anchor.rotation);
+            var imageRotation = Quaternion.Inverse(image.rotation);
             var data = new RoomMeshData
             {
-                anchorId = anchorId,
+                key = key,
                 savedAtUtc = DateTime.UtcNow,
                 // The world origin is the identity pose in world space.
-                originPose = new Pose(anchorRotation * -anchor.position, anchorRotation),
+                originPose = new Pose(imageRotation * -image.position, imageRotation),
             };
 
-            var worldToAnchor = Matrix4x4.TRS(anchor.position, anchor.rotation, Vector3.one).inverse;
+            var worldToImage = Matrix4x4.TRS(image.position, image.rotation, Vector3.one).inverse;
             foreach (var pair in GetCurrentMesh())
             {
                 var filter = pair.Key;
-                var piece = ExtractPiece(filter.sharedMesh, worldToAnchor * filter.transform.localToWorldMatrix);
+                var piece = ExtractPiece(filter.sharedMesh, worldToImage * filter.transform.localToWorldMatrix);
                 if (piece == null)
                     continue;
 
@@ -132,31 +123,39 @@ namespace UnityAR
                 data.pieces.Add(piece);
             }
 
-            RoomMeshFile.Write(GetPath(anchorId), data);
+            foreach (var cube in m_Cubes.cubes)
+            {
+                data.cubes.Add(new SavedCube
+                {
+                    pose = new Pose(worldToImage.MultiplyPoint3x4(cube.position), imageRotation * cube.rotation),
+                    size = cube.localScale.x,
+                });
+            }
+
+            RoomMeshFile.Write(GetPath(key), data);
             return data;
         }
 
         /// <summary>
-        /// Loads the mesh saved for the anchor and shows it in place of the live mesh, which stops scanning.
+        /// Loads the room saved under the key. Its mesh is shown in place of the live mesh, which stops scanning,
+        /// and its cubes replace the placed cubes.
         /// </summary>
-        /// <param name="anchorId">The persistent ID of the anchor the mesh belongs to.</param>
-        /// <param name="anchor">The anchor's transform, which the loaded mesh is attached to.</param>
-        /// <returns>The loaded mesh, including the saved world origin relative to the anchor.</returns>
-        public RoomMeshData Load(string anchorId, Transform anchor) => Load(anchorId, anchor, Pose.identity);
-
-        /// <summary>
-        /// Loads the mesh saved under the key and shows it in place of the live mesh, which stops scanning.
-        /// </summary>
-        /// <param name="anchorId">The key the mesh was saved under.</param>
+        /// <param name="key">The key the room was saved under.</param>
         /// <param name="parent">The transform the loaded mesh is attached to.</param>
-        /// <param name="anchorInParent">The pose the mesh was saved relative to, in <paramref name="parent"/>'s space.</param>
-        /// <returns>The loaded mesh, including the saved world origin relative to the anchor.</returns>
-        public RoomMeshData Load(string anchorId, Transform parent, Pose anchorInParent)
+        /// <param name="imageInParent">The scan image's pose in <paramref name="parent"/>'s space.</param>
+        /// <returns>The loaded room, including the saved world origin relative to the scan image.</returns>
+        public RoomMeshData Load(string key, Transform parent, Pose imageInParent)
         {
-            var data = RoomMeshFile.Read(GetPath(anchorId));
+            var data = RoomMeshFile.Read(GetPath(key));
             ClearLoadedMeshes();
-            m_LoadedMeshes.Add(Spawn(data, parent, anchorInParent));
+            var root = Spawn(data, parent, imageInParent).transform;
+            m_LoadedMeshes.Add(root.gameObject);
             SetLiveScanning(false);
+
+            // The mesh root sits at the scan image, so it converts the cubes' saved poses to world space.
+            m_Cubes.Clear();
+            foreach (var cube in data.cubes)
+                m_Cubes.Place(new Pose(root.TransformPoint(cube.pose.position), root.rotation * cube.pose.rotation), cube.size);
             return data;
         }
 
@@ -171,9 +170,9 @@ namespace UnityAR
 
         void OnDestroy() => ClearLoadedMeshes();
 
-        static string GetPath(string anchorId)
+        static string GetPath(string key)
         {
-            var fileName = anchorId;
+            var fileName = key;
             foreach (var invalid in Path.GetInvalidFileNameChars())
                 fileName = fileName.Replace(invalid, '_');
             return Path.Combine(folderPath, fileName + k_FileExtension);
@@ -224,7 +223,7 @@ namespace UnityAR
             }
         }
 
-        RoomMeshPiece ExtractPiece(Mesh mesh, Matrix4x4 meshToAnchor)
+        RoomMeshPiece ExtractPiece(Mesh mesh, Matrix4x4 meshToImage)
         {
             if (mesh.subMeshCount == 0)
                 return null;
@@ -251,9 +250,9 @@ namespace UnityAR
                 if (remap[source] < 0)
                 {
                     remap[source] = vertices.Count;
-                    vertices.Add(meshToAnchor.MultiplyPoint3x4(m_Vertices[source]));
+                    vertices.Add(meshToImage.MultiplyPoint3x4(m_Vertices[source]));
                     if (hasNormals)
-                        normals.Add(meshToAnchor.MultiplyVector(m_Normals[source]).normalized);
+                        normals.Add(meshToImage.MultiplyVector(m_Normals[source]).normalized);
                 }
                 triangles[i] = remap[source];
             }
@@ -266,13 +265,13 @@ namespace UnityAR
             };
         }
 
-        GameObject Spawn(RoomMeshData data, Transform parent, Pose anchorInParent)
+        GameObject Spawn(RoomMeshData data, Transform parent, Pose imageInParent)
         {
-            // The parent is an anchor or the trackables parent itself, both under the XR Origin, so the mesh stays
-            // fixed in the room when the world origin moves.
+            // The parent is the trackables parent, under the XR Origin, so the mesh stays fixed in the room when the
+            // world origin moves.
             var root = new GameObject("Saved Room Mesh");
             root.transform.SetParent(parent, false);
-            root.transform.SetLocalPositionAndRotation(anchorInParent.position, anchorInParent.rotation);
+            root.transform.SetLocalPositionAndRotation(imageInParent.position, imageInParent.rotation);
 
             foreach (var piece in data.pieces)
             {

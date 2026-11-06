@@ -9,17 +9,16 @@ using UnityEngine.XR.ARSubsystems;
 namespace UnityAR
 {
     /// <summary>
-    /// Saves and restores the room mesh and world origin using pre-registered images (scan targets).
+    /// Saves and restores the room (its mesh and the placed cubes) and the world origin using pre-registered images
+    /// (scan targets).
     /// </summary>
     /// <remarks>
     /// <para>Images are recognized whenever they are in view and drawn with an outline, but nothing is saved or
     /// loaded until the user arms an action with <see cref="ToggleSave"/> or <see cref="ToggleLoad"/>.</para>
-    /// <para>Saving makes the image's center and heading the world origin, then saves the current room mesh and
-    /// the origin relative to the image. Loading shows the room mesh saved to the image in place of live
-    /// scanning and puts the world origin back where it was saved. Either way the image must stay in the same
-    /// place in the room between sessions.</para>
-    /// <para>This works alongside <see cref="ItemAnchorController"/>; saved images and tagged items are stored
-    /// separately.</para>
+    /// <para>Saving makes the image's center and heading the world origin, then saves the current room mesh, the
+    /// placed cubes and the origin relative to the image. Loading shows the room mesh saved to the image in place of
+    /// live scanning, replaces the placed cubes with the saved ones and puts the world origin back where it was
+    /// saved. Either way the image must stay in the same place in the room between sessions.</para>
     /// </remarks>
     public class ImageTargetController : MonoBehaviour
     {
@@ -104,6 +103,11 @@ namespace UnityAR
             });
         }
 
+        void Start()
+        {
+            m_Status.Show("Pinch to place a cube. To save the room and cubes, press Save to image and look at Scan A. In a later session, press Load from image and look at it again.");
+        }
+
         void Update()
         {
             Target ready = null;
@@ -180,16 +184,16 @@ namespace UnityAR
             {
                 // Make the image the origin first, so the saved origin is the image itself.
                 m_WorldOrigin.SetOrigin(GetWorldPose(target));
-                if (m_Store.currentTriangleCount == 0)
+                if (!m_Store.hasContent)
                 {
-                    m_Status.Show($"Origin set to '{targetName}'. Scan the room first, then save to the image again.");
+                    m_Status.Show($"Origin set to '{targetName}'. Scan the room or place cubes first, then save to the image again.");
                     return;
                 }
 
                 var data = m_Store.Save(GetKey(target), GetWorldPose(target));
                 Highlight(target);
-                Debug.Log($"[ImageTarget] Saved '{targetName}' with {data.triangleCount} triangles");
-                m_Status.Show($"Origin set to '{targetName}' and the room saved to it ({data.triangleCount:N0} triangles).");
+                Debug.Log($"[ImageTarget] Saved '{targetName}' with {data.triangleCount} triangles and {data.cubes.Count} cubes");
+                m_Status.Show($"Origin set to '{targetName}' and the room saved to it ({data.triangleCount:N0} triangles, {CountCubes(data)}).");
             }
             catch (Exception exception)
             {
@@ -217,8 +221,8 @@ namespace UnityAR
                     anchor.position + anchor.rotation * data.originPose.position,
                     anchor.rotation * data.originPose.rotation));
                 Highlight(target);
-                Debug.Log($"[ImageTarget] Loaded '{targetName}': {data.triangleCount} triangles");
-                m_Status.Show($"Loaded the room and origin saved to '{targetName}' on {data.savedAtUtc.ToLocalTime():g}.");
+                Debug.Log($"[ImageTarget] Loaded '{targetName}': {data.triangleCount} triangles, {data.cubes.Count} cubes");
+                m_Status.Show($"Loaded the room ({CountCubes(data)}) and origin saved to '{targetName}' on {data.savedAtUtc.ToLocalTime():g}.");
             }
             catch (Exception exception)
             {
@@ -267,6 +271,8 @@ namespace UnityAR
             var trackables = m_XROrigin.TrackablesParent;
             return new Pose(trackables.TransformPoint(pose.position), trackables.rotation * pose.rotation);
         }
+
+        static string CountCubes(RoomMeshData data) => data.cubes.Count == 1 ? "1 cube" : $"{data.cubes.Count} cubes";
 
         static string GetName(Target target) => target.image.referenceImage.name;
 

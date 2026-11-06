@@ -356,9 +356,6 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 7698955068414132531, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 68358327}
-    - targetCorrespondingSourceObject: {fileID: 7698955068414132531, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 68358328}
   m_SourcePrefab: {fileID: 100100000, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
 --- !u!114 &68358318 stripped
@@ -387,22 +384,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7698955068414132528, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
   m_PrefabInstance: {fileID: 68358317}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &68358327
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 68358320}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 728ad7fae8e460a4ba41265c7308d757, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.ARAnchorManager
-  <trackablesChanged>k__BackingField:
-    m_PersistentCalls:
-      m_Calls: []
-  m_AnchorPrefab: {fileID: 0}
 --- !u!114 &68358328
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -710,6 +691,55 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0.8, y: 0.25}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &388382239
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 388382241}
+  - component: {fileID: 388382240}
+  m_Layer: 0
+  m_Name: Cubes
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &388382240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 388382239}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7d340707587243eb983565d10bcbb2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.CubePlacer
+  m_XROrigin: {fileID: 68358318}
+  m_HandPinch: {fileID: 1875112788}
+  m_Status: {fileID: 359046050}
+  m_CubeMaterial: {fileID: 2100000, guid: 974af85871aef4004941e5146ff75df5, type: 2}
+  m_CubeSize: 0.05
+--- !u!4 &388382241
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 388382239}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &920319680
 GameObject:
   m_ObjectHideFlags: 0
@@ -720,9 +750,6 @@ GameObject:
   m_Component:
   - component: {fileID: 920319683}
   - component: {fileID: 920319682}
-  - component: {fileID: 920319685}
-  - component: {fileID: 920319684}
-  - component: {fileID: 920319686}
   - component: {fileID: 920319688}
   - component: {fileID: 920319687}
   m_Layer: 0
@@ -746,6 +773,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UnityAR.RoomMeshStore
   m_MeshManager: {fileID: 250438013}
   m_Classification: {fileID: 250438012}
+  m_Cubes: {fileID: 388382240}
   m_LabelMaterials:
   - label: 0
     material: {fileID: 2100000, guid: 148da88dbc2a3504b8807d84202f8a59, type: 2}
@@ -783,64 +811,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &920319684
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 920319680}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c671ce54b5f7942b1975583fc472ffce, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.ItemAnchorController
-  m_XROrigin: {fileID: 68358318}
-  m_AnchorManager: {fileID: 68358327}
-  m_WorldOrigin: {fileID: 1367636612}
-  m_Store: {fileID: 920319682}
-  m_Status: {fileID: 359046050}
-  m_MappingGuide: {fileID: 920319685}
-  m_CaptureFrame: {fileID: 920319686}
-  m_HandPinch: {fileID: 1875112788}
-  m_RequiredGoodDirections: 3
-  m_MappingTimeout: 60
---- !u!114 &920319685
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 920319680}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77c1efd91d7034b68b9520502a30cc7f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.AnchorMappingGuide
-  m_LineMaterial: {fileID: 2100000, guid: 1fcd011b1fc7748baaec0fac1b3817b7, type: 2}
-  m_UnvisitedColor: {r: 0.35, g: 0.35, b: 0.35, a: 1}
-  m_InsufficientColor: {r: 1, g: 0.3, b: 0.25, a: 1}
-  m_SufficientColor: {r: 1, g: 0.85, b: 0.2, a: 1}
-  m_GoodColor: {r: 0.35, g: 1, b: 0.35, a: 1}
-  m_PinColor: {r: 0.3, g: 0.85, b: 1, a: 1}
---- !u!114 &920319686
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 920319680}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8e80afe4d005d44c3980936585fcd4c6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.CaptureFrame
-  m_Camera: {fileID: 68358319}
-  m_LineMaterial: {fileID: 2100000, guid: 1fcd011b1fc7748baaec0fac1b3817b7, type: 2}
-  m_HorizontalAngle: 20
-  m_VerticalAngle: 15
-  m_Distance: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &920319687
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -854,8 +824,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityAR.PhoneControllerButtons
   m_ImageTargets: {fileID: 920319688}
-  m_ItemAnchors: {fileID: 920319684}
   m_Store: {fileID: 920319682}
+  m_Cubes: {fileID: 388382240}
+  m_Status: {fileID: 359046050}
 --- !u!114 &920319688
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1192,3 +1163,4 @@ SceneRoots:
   - {fileID: 359046053}
   - {fileID: 920319683}
   - {fileID: 1875112789}
+  - {fileID: 388382241}
