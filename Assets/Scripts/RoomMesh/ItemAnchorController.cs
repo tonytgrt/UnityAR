@@ -8,7 +8,6 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
-using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using SerializableGuid = UnityEngine.XR.ARSubsystems.SerializableGuid;
 
 namespace UnityAR
@@ -18,10 +17,10 @@ namespace UnityAR
     /// origin, and restores both when a tagged item is recognized in a later session.
     /// </summary>
     /// <remarks>
-    /// <para>Tapping with the beam on a detected surface makes that point the world origin and tags the item there.
+    /// <para>Pinching at an item makes the point between the fingertips the world origin and tags the item there.
     /// XREAL then maps the item and its surroundings while the user looks at it from a few angles. Once enough
     /// angles are mapped well, the anchor is saved together with the current room mesh and the origin, replacing
-    /// any item saved at the same spot before. Tapping somewhere else restarts tagging there.</para>
+    /// any item saved at the same spot before. Pinching somewhere else restarts tagging there.</para>
     /// <para>Pressing the phone controller's APP button shows a capture frame in the center of view and starts
     /// looking for saved items. When XREAL recognizes one inside the frame, its room mesh replaces live scanning
     /// and the world origin returns to where it was saved. Pressing APP again stops looking, and pressing it while
@@ -81,8 +80,7 @@ namespace UnityAR
         CaptureFrame m_CaptureFrame;
 
         [SerializeField]
-        [Tooltip("Interactors whose beam can tag items. Leave empty to use every Near-Far Interactor under the XR Origin.")]
-        List<NearFarInteractor> m_Interactors = new List<NearFarInteractor>();
+        HandPinch m_HandPinch;
 
         [SerializeField]
         [Range(1, k_DirectionCount)]
@@ -110,14 +108,13 @@ namespace UnityAR
 
         void Start()
         {
-            if (m_Interactors.Count == 0)
-                m_Interactors.AddRange(m_XROrigin.GetComponentsInChildren<NearFarInteractor>(true));
-
-            m_Status.Show("Scan the room by looking around, then tap an item to make it the origin and save the room with it. In a later session, press APP and look at the item through the frame.");
+            m_HandPinch.pinched += OnPinch;
+            m_Status.Show("Scan the room by looking around, then pinch at an item to make it the origin and save the room with it. In a later session, press APP and look at the item through the frame.");
         }
 
         void OnDestroy()
         {
+            m_HandPinch.pinched -= OnPinch;
             if (m_VirtualController != null)
                 m_VirtualController.pointerDown -= OnVirtualControllerButtonDown;
         }
@@ -131,8 +128,6 @@ namespace UnityAR
                 m_VirtualController.pointerDown += OnVirtualControllerButtonDown;
             }
 
-            HandleTaps();
-
             foreach (var item in m_Items)
                 UpdateLocated(item);
 
@@ -143,30 +138,7 @@ namespace UnityAR
                 UpdateMapping();
         }
 
-        void HandleTaps()
-        {
-            foreach (var interactor in m_Interactors)
-            {
-                if (interactor == null || !interactor.isActiveAndEnabled || !WasTapped(interactor))
-                    continue;
-
-                if (BeamRaycast.TryGetDetectedSurfaceHit(interactor, m_XROrigin, out var hit))
-                    OnTap(hit.point);
-                else
-                    Debug.Log("[ItemAnchor] Tap ignored: beam is not on a detected surface");
-                return;
-            }
-        }
-
-        // The phone controller's tap is its trigger, which the XRI default input actions bind to Activate; a
-        // tracked hand's pinch is Select.
-        static bool WasTapped(NearFarInteractor interactor)
-        {
-            return interactor.activateInput.ReadWasPerformedThisFrame() ||
-                interactor.selectInput.ReadWasPerformedThisFrame();
-        }
-
-        void OnTap(Vector3 point)
+        void OnPinch(Vector3 point)
         {
             if (m_Saving)
             {
@@ -185,7 +157,7 @@ namespace UnityAR
                 StartMapping(point);
             m_WorldOrigin.SetOrigin(point);
             if (!hasMesh)
-                m_Status.Show("Origin set. To save it with the room, scan the room first, then tap the item again.");
+                m_Status.Show("Origin set. To save it with the room, scan the room first, then pinch at the item again.");
         }
 
         void OnVirtualControllerButtonDown(XREALButtonType button, GameObject buttonObject, PointerEventData eventData)
@@ -214,7 +186,7 @@ namespace UnityAR
         {
             if (m_MappingAnchor != null || m_Saving)
             {
-                m_Status.Show("Finish tagging the item first, or tap somewhere else to start over.");
+                m_Status.Show("Finish tagging the item first, or pinch somewhere else to start over.");
                 return;
             }
 
@@ -236,7 +208,7 @@ namespace UnityAR
             }
 
             m_Store.ResumeLiveScanning();
-            m_Status.Show("Rescanning the room. Tap an item to save the room with it, or look for a saved item or image.");
+            m_Status.Show("Rescanning the room. Pinch at an item to save the room with it, or look for a saved item or image.");
         }
 
         async void StartCapture()
@@ -251,7 +223,7 @@ namespace UnityAR
 
             await LoadSavedItems();
             if (m_Capturing && m_Items.Count == 0)
-                StopCapture("No tagged items are saved yet. Tap an item with the beam to tag it.");
+                StopCapture("No tagged items are saved yet. Pinch at an item to tag it.");
         }
 
         void StopCapture(string message)

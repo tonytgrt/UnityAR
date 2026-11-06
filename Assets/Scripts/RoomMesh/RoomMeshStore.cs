@@ -269,7 +269,7 @@ namespace UnityAR
         GameObject Spawn(RoomMeshData data, Transform parent, Pose anchorInParent)
         {
             // The parent is an anchor or the trackables parent itself, both under the XR Origin, so the mesh stays
-            // fixed in the room when the world origin moves, and BeamRaycast treats it as a detected surface.
+            // fixed in the room when the world origin moves.
             var root = new GameObject("Saved Room Mesh");
             root.transform.SetParent(parent, false);
             root.transform.SetLocalPositionAndRotation(anchorInParent.position, anchorInParent.rotation);

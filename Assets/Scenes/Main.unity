@@ -127,6 +127,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 449614620397826506, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
+      propertyPath: m_EnableFarCasting
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1424478090858012279, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
       propertyPath: m_ExtendLineToEmptyHit
       value: 1
@@ -247,6 +251,10 @@ PrefabInstance:
       propertyPath: m_NoValidHitProperties.m_Gradient.m_NumAlphaKeys
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 4499386696161558318, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
+      propertyPath: m_EnableFarCasting
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5277299566577620861, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
       propertyPath: m_ExtendLineToEmptyHit
       value: 1
@@ -286,6 +294,14 @@ PrefabInstance:
     - target: {fileID: 5277299566577620861, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
       propertyPath: m_NoValidHitProperties.m_Gradient.m_NumAlphaKeys
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6684787315617298624, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
+      propertyPath: m_EnableFarCasting
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7434840060424449877, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
+      propertyPath: m_EnableFarCasting
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7695254148612354484, guid: 3182b5074a6bf3d4887a44a38cbb9cb6, type: 3}
       propertyPath: m_Name
@@ -786,7 +802,7 @@ MonoBehaviour:
   m_Status: {fileID: 359046050}
   m_MappingGuide: {fileID: 920319685}
   m_CaptureFrame: {fileID: 920319686}
-  m_Interactors: []
+  m_HandPinch: {fileID: 1875112788}
   m_RequiredGoodDirections: 3
   m_MappingTimeout: 60
 --- !u!114 &920319685
@@ -1053,6 +1069,57 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1875112787
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1875112789}
+  - component: {fileID: 1875112788}
+  m_Layer: 0
+  m_Name: Hand Pinch
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1875112788
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1875112787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67a413e6838fa4c51af2b50df36cc9e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.HandPinch
+  m_XROrigin: {fileID: 68358318}
+  m_CursorMaterial: {fileID: 2100000, guid: 1fcd011b1fc7748baaec0fac1b3817b7, type: 2}
+  m_PinchDistance: 0.025
+  m_ReleaseDistance: 0.05
+  m_SettleTime: 0.3
+  m_OpenColor: {r: 0.85, g: 0.85, b: 0.85, a: 1}
+  m_PinchColor: {r: 0.35, g: 1, b: 0.35, a: 1}
+--- !u!4 &1875112789
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1875112787}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2061908960
 GameObject:
   m_ObjectHideFlags: 0
@@ -1124,3 +1191,4 @@ SceneRoots:
   - {fileID: 1387653215}
   - {fileID: 359046053}
   - {fileID: 920319683}
+  - {fileID: 1875112789}
