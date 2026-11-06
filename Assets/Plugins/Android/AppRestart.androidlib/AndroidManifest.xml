@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.unityar.restart">
+  <application>
+    <!-- Runs in its own process so it can relaunch the app after the app's process has ended. -->
+    <activity
+        android:name="com.unityar.restart.RestartActivity"
+        android:process=":restart"
+        android:taskAffinity="com.unityar.restart"
+        android:excludeFromRecents="true"
+        android:noHistory="true"
+        android:exported="false"
+        android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+  </application>
+</manifest>

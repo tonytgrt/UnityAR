@@ -14,7 +14,9 @@ namespace UnityAR
     /// </summary>
     /// <remarks>
     /// <para>Images are recognized whenever they are in view and drawn with an outline, but nothing is saved or
-    /// loaded until the user arms an action with <see cref="ToggleSave"/> or <see cref="ToggleLoad"/>.</para>
+    /// loaded until the user arms an action with <see cref="ToggleSave"/> or <see cref="ToggleLoad"/>. While an
+    /// action is armed, a scan frame is shown in the center of view, and the action runs on the first image the user
+    /// looks at through it.</para>
     /// <para>Saving makes the image's center and heading the world origin, then saves the current room mesh, the
     /// placed cubes and the origin relative to the image. Loading shows the room mesh saved to the image in place of
     /// live scanning, replaces the placed cubes with the saved ones and puts the world origin back where it was
@@ -67,6 +69,9 @@ namespace UnityAR
         StatusToast m_Status;
 
         [SerializeField]
+        ScanFrame m_ScanFrame;
+
+        [SerializeField]
         [Tooltip("Material for the outline drawn on recognized images. Must use vertex colors.")]
         Material m_OutlineMaterial;
 
@@ -95,10 +100,14 @@ namespace UnityAR
         void Arm(ImageAction action)
         {
             armedAction = action;
+            if (action == ImageAction.None)
+                m_ScanFrame.Hide();
+            else
+                m_ScanFrame.Show();
             m_Status.Show(action switch
             {
-                ImageAction.Save => "Look at a scan image to make it the origin and save the room to it.",
-                ImageAction.Load => "Look at a scan image to load the room and origin saved to it.",
+                ImageAction.Save => "Look at a scan image through the frame to make it the origin and save the room to it.",
+                ImageAction.Load => "Look at a scan image through the frame to load the room and origin saved to it.",
                 _ => "Cancelled.",
             });
         }
@@ -116,7 +125,7 @@ namespace UnityAR
             foreach (var image in m_TrackedImageManager.trackables)
             {
                 var target = UpdateTarget(image);
-                if (target == null)
+                if (target == null || (armedAction != ImageAction.None && !m_ScanFrame.Contains(image.transform.position)))
                     continue;
 
                 // The closest settled image is most likely the one the user is looking at.
@@ -134,6 +143,7 @@ namespace UnityAR
             {
                 var action = armedAction;
                 armedAction = ImageAction.None;
+                m_ScanFrame.Hide();
                 if (action == ImageAction.Save)
                     Save(ready);
                 else

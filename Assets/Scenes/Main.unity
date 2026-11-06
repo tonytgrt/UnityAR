@@ -551,7 +551,7 @@ MonoBehaviour:
   m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 7975e0f8e3800481db4c7aa0a1c8087c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -648,7 +648,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  - {fileID: 2100000, guid: 7975e0f8e3800481db4c7aa0a1c8087c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -752,6 +752,7 @@ GameObject:
   - component: {fileID: 920319682}
   - component: {fileID: 920319688}
   - component: {fileID: 920319687}
+  - component: {fileID: 920319689}
   m_Layer: 0
   m_Name: Room Mesh
   m_TagString: Untagged
@@ -844,8 +845,27 @@ MonoBehaviour:
   m_WorldOrigin: {fileID: 1367636612}
   m_Store: {fileID: 920319682}
   m_Status: {fileID: 359046050}
-  m_OutlineMaterial: {fileID: 2100000, guid: 1fcd011b1fc7748baaec0fac1b3817b7, type: 2}
+  m_ScanFrame: {fileID: 920319689}
+  m_OutlineMaterial: {fileID: 2100000, guid: 9902757dd845a49c9808d24cc78fa45f, type: 2}
   m_SettleTime: 0.6
+--- !u!114 &920319689
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920319680}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 334028857da364498932ff7bca93be05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnityAR.ScanFrame
+  m_Camera: {fileID: 68358319}
+  m_LineMaterial: {fileID: 2100000, guid: 9902757dd845a49c9808d24cc78fa45f, type: 2}
+  m_HorizontalAngle: 20
+  m_VerticalAngle: 14
+  m_Distance: 1
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &1367636610
 GameObject:
   m_ObjectHideFlags: 0
@@ -1070,7 +1090,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnityAR.HandPinch
   m_XROrigin: {fileID: 68358318}
-  m_CursorMaterial: {fileID: 2100000, guid: 1fcd011b1fc7748baaec0fac1b3817b7, type: 2}
+  m_CursorMaterial: {fileID: 2100000, guid: 9902757dd845a49c9808d24cc78fa45f, type: 2}
   m_PinchDistance: 0.025
   m_ReleaseDistance: 0.05
   m_SettleTime: 0.3

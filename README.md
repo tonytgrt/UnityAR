@@ -144,16 +144,19 @@ New cubes are lined up with the world axes, so after saving to Scan A they line 
 | **Load from image** | The next scan image you look at brings back the room mesh and cubes saved to it, and restores the origin |
 | **Rescan** | Removes a loaded room mesh and resumes live scanning. Cubes stay |
 | **Clear cubes** | Removes all cubes. Saved rooms keep their cubes until you save over them |
+| **Clear everything** | Restarts the app, which clears everything a fresh launch would: cubes, the loaded or live room mesh, the world origin and tracking. Saved rooms stay saved. Press it twice within 3 seconds; the first press only asks for confirmation |
 
 **Save to image** and **Load from image** turn green while they wait for an image. Press one again to cancel.
+
+While one of them is waiting, a scan frame (four corner brackets) is shown in the middle of your view. The frame, the status messages, the outline on recognized images and the pinch ring are drawn on top of everything, so a desk or other surface closer than them doesn't hide them.
 
 ### Saving and loading with Scan A
 
 A scan image is a picture registered in the app at build time.
 
 1. Print `Assets/ScanTargets/ScanA.jpg` at **20 × 15 cm** and put it somewhere it can stay, flat on a desk or on a wall. XREAL works out the image's distance from its registered size, so a smaller or larger copy puts the origin, mesh and cubes in the wrong place. Showing the image on a screen at that exact size also works.
-2. Scan the room and place some cubes. Press **Save to image** and look at the image. A blue outline appears when it's recognized, and turns green when the save is done. The origin moves to the center of the image, facing along it.
-3. In a later session, press **Load from image** and look at the image. The saved room mesh replaces live scanning, the saved cubes replace any cubes you placed, and the origin comes back.
+2. Scan the room and place some cubes. Press **Save to image** and look at the image through the scan frame. Only an image inside the frame is used. A blue outline appears when it's recognized, and turns green when the save is done. The origin moves to the center of the image, facing along it.
+3. In a later session, press **Load from image** and look at the image through the frame. The saved room mesh replaces live scanning, the saved cubes replace any cubes you placed, and the origin comes back.
 
 If there's no room mesh and no cubes yet, **Save to image** only sets the origin. The image must stay in the same place between sessions, or everything loaded is moved by the same amount.
 
@@ -171,10 +174,12 @@ Rooms saved before cubes existed still load, with no cubes. Files named after an
 | --- | --- |
 | `Assets/Scenes/Main.unity` | The app's scene: XREAL rig, AR session, meshing, image tracking, world origin, hand pinch and cubes |
 | `Assets/Scripts/WorldOrigin/` | `WorldOrigin` moves the XR rig so a chosen point is world `(0, 0, 0)`. `InfiniteAxes` draws the axes; its object is disabled in the scene |
-| `Assets/Scripts/RoomMesh/` | `ImageTargetController` (saving to and loading from scan images), `PhoneControllerButtons` (the buttons on the phone's controller screen), `RoomMeshStore` (saving and restoring the mesh and cubes), `RoomMeshFile` (the save format), `StatusToast` |
+| `Assets/Scripts/RoomMesh/` | `ImageTargetController` (saving to and loading from scan images), `ScanFrame` (the frame shown while waiting for an image), `PhoneControllerButtons` (the buttons on the phone's controller screen), `RoomMeshStore` (saving and restoring the mesh and cubes), `RoomMeshFile` (the save format), `StatusToast` |
 | `Assets/ScanTargets/` | The scan image `ScanA.jpg` and its reference image library, `ScanTargets.asset` (Scan A, 0.20 × 0.15 m) |
 | `Assets/Scripts/Interaction/HandPinch.cs` | Detects pinches from XR Hands joint poses and draws the pinch cursor |
 | `Assets/Scripts/Cubes/CubePlacer.cs` | Places a cube at each pinch and keeps track of the cubes. They use `Assets/Materials/Cube.mat` |
+| `Assets/Scripts/App/AppRestart.cs`, `Assets/Plugins/Android/AppRestart.androidlib/` | **Clear everything**. XREAL can't reset tracking or clear its room mesh while running, so the app quits the way XREAL's home menu quits it, and `RestartActivity`, running in its own `:restart` process, opens it again once the old process has ended |
+| `Assets/Shaders/OverlayUnlit.shader` | Unlit, vertex-colored lines drawn on top of everything, used by `Assets/Materials/OverlayLine.mat` for the scan frame, image outlines and pinch ring. The status text uses TextMesh Pro's overlay shader through `Assets/Materials/StatusText Overlay.mat` |
 | `Assets/XREAL/XREALVirtualController Variant.prefab` | XREAL's phone controller with its UI camera set to **Target Eye: None**. The stock prefab sizes that camera to the glasses, so the controller is drawn shrunk and off-screen on the phone |
 | `Assets/XR/Settings/XREALSettings.asset` | XREAL settings: **Input source** is **Hands**, and the link to the controller variant. Keep it Android-serialized (see [Clone and open](#2-clone-and-open-the-project)) |
 | `Assets/Plugins/Android/gradleTemplate.properties` | Sets `android.uniquePackageNames=false`. Two XREAL libraries share a namespace, which Unity 6.6's Android Gradle Plugin 9 otherwise rejects |
@@ -196,6 +201,7 @@ Rooms saved before cubes existed still load, with no cubes. Files named after an
 | No hand joints or pinch ring | Keep your hand in front of the glasses, within their view and arm's reach. The log should show `NRHandTracking START!` at launch; if not, check that **Input source** is **Hands** in Project Settings → XR Plug-in Management → XREAL |
 | Pinching doesn't place a cube | Each pinch is logged as `[HandPinch] … pinched at …`, and each cube as `[CubePlacer] Placed cube …`. If nothing is logged, open your fingers fully before pinching again, and keep the hand in view for a moment first: a hand that comes into view already pinched is ignored. The thresholds are on the **Hand Pinch** object in `Main.unity` |
 | Scan image never gets an outline | Look at it from about 0.5–1 m in good light, with the whole image in view. Glare on a glossy print or a screen can prevent recognition |
+| **Clear everything** closes the app but it doesn't come back | Open it from the launcher. The log shows `[AppRestart] Restarting`, then XREAL's `QuitApplication`; `RestartActivity` relaunches the app up to about 6 seconds later |
 | Mesh, cubes or origin loaded from a scan image are offset | The image was printed at the wrong size or moved since it was saved |
 | Phone keeps restarting to install updates | See [S22.md](S22.md) for how automatic updates were blocked |
 
@@ -206,6 +212,7 @@ Rooms saved before cubes existed still load, with no cubes. Files named after an
   - The SDK on Android 16, using the workaround above.
   - Saving to and loading from Scan A (2026-10-21).
   - Hand tracking and pinching (2026-11-06). It replaced the phone controller's beam, whose direction drifted after some movement.
-- Not yet verified on a device: placing cubes, and saving and loading them with Scan A.
+- Verified on the S22 (2026-11-06): placing cubes, and saving and loading them with Scan A.
+- Not yet verified on a device: the scan frame, drawing on top of everything, and **Clear everything**. The restart activity is confirmed to be in the APK.
 - Removed: tagging arbitrary items with persistent XREAL anchors. Scan A is now the only way to save and load. The anchor code is in the git history (`f4dcba5` and earlier) if it's needed again.
 - The package ID is still the Unity template's `com.unity.template.ar_mobile`. Changing it moves the app's data folder, so do it before saving rooms you want to keep.
