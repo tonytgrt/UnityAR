@@ -6,7 +6,7 @@ What the app does:
 
 - **6DoF tracking** from the glasses' own cameras.
 - **Room meshing**: XREAL builds a mesh of the room as you look around, colored by surface type (floor, wall, table, and so on).
-- **Hand tracking**: pinch with either hand to place a small cube where your fingertips meet.
+- **Hand tracking**: pinch in empty space to place a small cube, and pinch a cube to pick it up and move it.
 - **Scan images**: look at a pre-registered image (**Scan A**) to make it Unity's world origin `(0, 0, 0)` and save the room to it: the room mesh, the cubes and the origin. In a later session, look at the image again to get all of them back without rescanning.
 
 Buttons added to the phone's controller screen save and load the room.
@@ -130,9 +130,19 @@ $ADB logcat -s Unity XREAL | grep -E "\[(WorldOrigin|HandPinch|CubePlacer|ImageT
 
 Look around and the room mesh appears and grows.
 
-### Placing cubes
+### Placing and moving cubes
 
-Hold your hand in view of the glasses, where you want a cube, and touch your thumb and index fingertips together. The ring between them closes in as your fingers close and turns green when the pinch registers, and a 5 cm orange cube appears there. Open your fingers fully before the next pinch.
+Hold your hand in view of the glasses and touch your thumb and index fingertips together. A ring between them shows where the pinch is; it closes in as your fingers close and turns green when the pinch registers.
+
+- **Pinch on or next to a cube** (within 3 cm of its surface): picks the cube up. It follows your fingers until you open them.
+- **Pinch anywhere else:** places a new 5 cm orange cube centered on the pinch, already picked up. Let go right away to leave it there, or keep pinching to carry it into place.
+
+Open your fingers fully before the next pinch. Either hand works, and each hand can hold its own cube.
+
+Pinches are detected from the distance between the thumb and index fingertips. XREAL also recognizes hand gestures (open hand, grab, pinch, point, victory, call, system and thumbs up), but they were too unreliable to use on the S22:
+- Point: most pinches were reported as pointing.
+- Open palm facing up: hands were tracked poorly with the palm turned up, and an open hand is reported whenever a hand is relaxed.
+- Fist: reported, but it flickered between gestures every 0.1 to 0.3 seconds and was never held long enough to tell it apart from a hand closing into a pinch.
 
 New cubes are lined up with the world axes, so after saving to Scan A they line up with the image. Cubes stay fixed in the room when the world origin moves.
 
@@ -176,8 +186,8 @@ Rooms saved before cubes existed still load, with no cubes. Files named after an
 | `Assets/Scripts/WorldOrigin/` | `WorldOrigin` moves the XR rig so a chosen point is world `(0, 0, 0)`. `InfiniteAxes` draws the axes; its object is disabled in the scene |
 | `Assets/Scripts/RoomMesh/` | `ImageTargetController` (saving to and loading from scan images), `ScanFrame` (the frame shown while waiting for an image), `PhoneControllerButtons` (the buttons on the phone's controller screen), `RoomMeshStore` (saving and restoring the mesh and cubes), `RoomMeshFile` (the save format), `StatusToast` |
 | `Assets/ScanTargets/` | The scan image `ScanA.jpg` and its reference image library, `ScanTargets.asset` (Scan A, 0.20 × 0.15 m) |
-| `Assets/Scripts/Interaction/HandPinch.cs` | Detects pinches from XR Hands joint poses and draws the pinch cursor |
-| `Assets/Scripts/Cubes/CubePlacer.cs` | Places a cube at each pinch and keeps track of the cubes. They use `Assets/Materials/Cube.mat` |
+| `Assets/Scripts/Interaction/` | `HandPinch` (pinches from XR Hands joint poses, and the pinch cursor), `HandJoints` (joint positions in world space) |
+| `Assets/Scripts/Cubes/CubePlacer.cs` | Places a cube at a pinch in empty space, moves cubes that are pinched, and keeps track of the cubes. They use `Assets/Materials/Cube.mat` |
 | `Assets/Scripts/App/AppRestart.cs`, `Assets/Plugins/Android/AppRestart.androidlib/` | **Clear everything**. XREAL can't reset tracking or clear its room mesh while running, so the app quits the way XREAL's home menu quits it, and `RestartActivity`, running in its own `:restart` process, opens it again once the old process has ended |
 | `Assets/Shaders/OverlayUnlit.shader` | Unlit, vertex-colored lines drawn on top of everything, used by `Assets/Materials/OverlayLine.mat` for the scan frame, image outlines and pinch ring. The status text uses TextMesh Pro's overlay shader through `Assets/Materials/StatusText Overlay.mat` |
 | `Assets/XREAL/XREALVirtualController Variant.prefab` | XREAL's phone controller with its UI camera set to **Target Eye: None**. The stock prefab sizes that camera to the glasses, so the controller is drawn shrunk and off-screen on the phone |
@@ -199,7 +209,7 @@ Rooms saved before cubes existed still load, with no cubes. Files named after an
 | Build fails: "Namespace 'nrsdk.pack' is used in multiple modules" | `Assets/Plugins/Android/gradleTemplate.properties` is missing |
 | Build And Run ends with "No activity … MAIN … LAUNCHER" | Harmless; open the app on the phone |
 | No hand joints or pinch ring | Keep your hand in front of the glasses, within their view and arm's reach. The log should show `NRHandTracking START!` at launch; if not, check that **Input source** is **Hands** in Project Settings → XR Plug-in Management → XREAL |
-| Pinching doesn't place a cube | Each pinch is logged as `[HandPinch] … pinched at …`, and each cube as `[CubePlacer] Placed cube …`. If nothing is logged, open your fingers fully before pinching again, and keep the hand in view for a moment first: a hand that comes into view already pinched is ignored. The thresholds are on the **Hand Pinch** object in `Main.unity` |
+| Pinching doesn't place or move a cube | Each pinch is logged as `[HandPinch] … pinched at …`, and each new cube or pickup as `[CubePlacer] Placed cube …` or `[CubePlacer] … picked up …`. To move a cube, start the pinch on it or within 3 cm of it. Open your fingers fully before pinching again, and keep the hand in view for a moment first: a hand that comes into view already pinched is ignored. The thresholds are on the **Hands** object in `Main.unity` |
 | Scan image never gets an outline | Look at it from about 0.5–1 m in good light, with the whole image in view. Glare on a glossy print or a screen can prevent recognition |
 | **Clear everything** closes the app but it doesn't come back | Open it from the launcher. The log shows `[AppRestart] Restarting`, then XREAL's `QuitApplication`; `RestartActivity` relaunches the app up to about 6 seconds later |
 | Mesh, cubes or origin loaded from a scan image are offset | The image was printed at the wrong size or moved since it was saved |
@@ -213,6 +223,8 @@ Rooms saved before cubes existed still load, with no cubes. Files named after an
   - Saving to and loading from Scan A (2026-10-21).
   - Hand tracking and pinching (2026-11-06). It replaced the phone controller's beam, whose direction drifted after some movement.
 - Verified on the S22 (2026-11-06): placing cubes, and saving and loading them with Scan A.
-- Not yet verified on a device: the scan frame, drawing on top of everything, and **Clear everything**. The restart activity is confirmed to be in the APK.
+- Verified on the S22 (2026-11-06): XREAL's gesture IDs match the NRSDK ones (open hand 0, grab 1, pinch 2, point 3, victory 4).
+- Verified on the S22 (2026-11-06): moving cubes by pinching.
+- Not yet verified on a device: placing cubes by pinching in empty space, the scan frame, drawing on top of everything, and **Clear everything**. The restart activity is confirmed to be in the APK.
 - Removed: tagging arbitrary items with persistent XREAL anchors. Scan A is now the only way to save and load. The anchor code is in the git history (`f4dcba5` and earlier) if it's needed again.
 - The package ID is still the Unity template's `com.unity.template.ar_mobile`. Changing it moves the app's data folder, so do it before saving rooms you want to keep.

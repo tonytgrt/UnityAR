@@ -725,6 +725,7 @@ MonoBehaviour:
   m_Status: {fileID: 359046050}
   m_CubeMaterial: {fileID: 2100000, guid: 974af85871aef4004941e5146ff75df5, type: 2}
   m_CubeSize: 0.05
+  m_GrabMargin: 0.03
 --- !u!4 &388382241
 Transform:
   m_ObjectHideFlags: 0
@@ -1071,7 +1072,7 @@ GameObject:
   - component: {fileID: 1875112789}
   - component: {fileID: 1875112788}
   m_Layer: 0
-  m_Name: Hand Pinch
+  m_Name: Hands
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

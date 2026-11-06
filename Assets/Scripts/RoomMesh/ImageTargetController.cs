@@ -114,7 +114,7 @@ namespace UnityAR
 
         void Start()
         {
-            m_Status.Show("Pinch to place a cube. To save the room and cubes, press Save to image and look at Scan A. In a later session, press Load from image and look at it again.");
+            m_Status.Show("Pinch to place a cube, and pinch a cube to move it. To save the room and cubes, press Save to image and look at Scan A. In a later session, press Load from image and look at it again.");
         }
 
         void Update()

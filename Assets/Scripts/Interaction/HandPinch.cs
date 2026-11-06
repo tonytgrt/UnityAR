@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -8,7 +7,7 @@ using UnityEngine.XR.Hands;
 namespace UnityAR
 {
     /// <summary>
-    /// Detects pinches of tracked hands and reports where in the room each pinch happened.
+    /// Detects pinches of tracked hands and follows each pinch while it is held.
     /// </summary>
     /// <remarks>
     /// A pinch is the tips of the thumb and index finger coming together, and its point is halfway between them.
@@ -23,14 +22,14 @@ namespace UnityAR
             public LineRenderer cursor;
             public float trackedSince = -1f;
             public bool pinching;
+            public bool reported;
+            public Vector3 point;
         }
 
         const int k_CursorPointCount = 24;
         const float k_CursorWidth = 0.002f;
         const float k_MinCursorRadius = 0.006f;
         const float k_MaxCursorRadius = 0.03f;
-
-        static readonly List<XRHandSubsystem> s_Subsystems = new List<XRHandSubsystem>();
 
         [SerializeField]
         XROrigin m_XROrigin;
@@ -64,7 +63,22 @@ namespace UnityAR
         /// <summary>
         /// Raised when a hand starts pinching, with the world-space point between its thumb and index fingertips.
         /// </summary>
-        public event Action<Vector3> pinched;
+        public event Action<Handedness, Vector3> pinchStarted;
+
+        /// <summary>
+        /// Raised when a pinch reported by <see cref="pinchStarted"/> ends, including when the hand stops being tracked.
+        /// </summary>
+        public event Action<Handedness> pinchEnded;
+
+        /// <summary>
+        /// Gets the current pinch point of a hand, if that hand is pinching.
+        /// </summary>
+        public bool TryGetPinchPoint(Handedness handedness, out Vector3 point)
+        {
+            var state = handedness == Handedness.Left ? m_LeftHand : m_RightHand;
+            point = state.point;
+            return state.reported;
+        }
 
         void Awake()
         {
@@ -75,7 +89,7 @@ namespace UnityAR
         void Update()
         {
             if (m_Subsystem == null || !m_Subsystem.running)
-                m_Subsystem = FindRunningSubsystem();
+                m_Subsystem = HandJoints.FindRunningSubsystem();
 
             if (m_Subsystem == null)
             {
@@ -88,20 +102,10 @@ namespace UnityAR
             UpdateHand(m_RightHand, m_Subsystem.rightHand);
         }
 
-        static XRHandSubsystem FindRunningSubsystem()
-        {
-            SubsystemManager.GetSubsystems(s_Subsystems);
-            foreach (var subsystem in s_Subsystems)
-            {
-                if (subsystem.running)
-                    return subsystem;
-            }
-            return null;
-        }
-
         void UpdateHand(HandState state, XRHand hand)
         {
-            if (!TryGetFingertips(hand, out var thumbTip, out var indexTip))
+            if (!HandJoints.TryGetWorldPosition(m_XROrigin, hand, XRHandJointID.ThumbTip, out var thumbTip) ||
+                !HandJoints.TryGetWorldPosition(m_XROrigin, hand, XRHandJointID.IndexTip, out var indexTip))
             {
                 Untrack(state);
                 return;
@@ -111,11 +115,11 @@ namespace UnityAR
                 state.trackedSince = Time.time;
 
             var distance = Vector3.Distance(thumbTip, indexTip);
-            var point = (thumbTip + indexTip) * 0.5f;
+            state.point = (thumbTip + indexTip) * 0.5f;
             if (state.pinching)
             {
                 if (distance > m_ReleaseDistance)
-                    state.pinching = false;
+                    EndPinch(state);
             }
             else if (distance < m_PinchDistance)
             {
@@ -123,35 +127,29 @@ namespace UnityAR
                 state.pinching = true;
                 if (Time.time - state.trackedSince >= m_SettleTime)
                 {
-                    Debug.Log($"[HandPinch] {state.handedness} hand pinched at {point:F3}");
-                    pinched?.Invoke(point);
+                    state.reported = true;
+                    Debug.Log($"[HandPinch] {state.handedness} hand pinched at {state.point:F3}");
+                    pinchStarted?.Invoke(state.handedness, state.point);
                 }
             }
 
-            UpdateCursor(state, point, distance);
+            UpdateCursor(state, distance);
         }
 
-        bool TryGetFingertips(XRHand hand, out Vector3 thumbTip, out Vector3 indexTip)
+        void EndPinch(HandState state)
         {
-            thumbTip = default;
-            indexTip = default;
-            if (!hand.isTracked ||
-                !hand.GetJoint(XRHandJointID.ThumbTip).TryGetPose(out var thumbPose) ||
-                !hand.GetJoint(XRHandJointID.IndexTip).TryGetPose(out var indexPose))
-                return false;
-
-            // Joint poses are in the XR Origin's tracking space, the same space as the camera's pose.
-            var trackingSpace = m_XROrigin.CameraFloorOffsetObject.transform;
-            thumbTip = trackingSpace.TransformPoint(thumbPose.position);
-            indexTip = trackingSpace.TransformPoint(indexPose.position);
-            return true;
+            var reported = state.reported;
+            state.pinching = false;
+            state.reported = false;
+            if (reported)
+                pinchEnded?.Invoke(state.handedness);
         }
 
-        static void Untrack(HandState state)
+        void Untrack(HandState state)
         {
             state.trackedSince = -1f;
-            state.pinching = false;
             state.cursor.enabled = false;
+            EndPinch(state);
         }
 
         HandState CreateHandState(Handedness handedness)
@@ -171,16 +169,16 @@ namespace UnityAR
             return new HandState { handedness = handedness, cursor = cursor };
         }
 
-        void UpdateCursor(HandState state, Vector3 point, float fingertipDistance)
+        void UpdateCursor(HandState state, float fingertipDistance)
         {
             // A ring facing the viewer, around the fingertips until they are close together.
             var radius = Mathf.Clamp(fingertipDistance * 0.5f, k_MinCursorRadius, k_MaxCursorRadius);
-            var facing = Quaternion.LookRotation(point - m_XROrigin.Camera.transform.position);
+            var facing = Quaternion.LookRotation(state.point - m_XROrigin.Camera.transform.position);
             var cursor = state.cursor;
             for (var i = 0; i < k_CursorPointCount; i++)
             {
                 var angle = i * Mathf.PI * 2f / k_CursorPointCount;
-                cursor.SetPosition(i, point + facing * new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * radius);
+                cursor.SetPosition(i, state.point + facing * new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * radius);
             }
 
             var color = state.pinching ? m_PinchColor : m_OpenColor;
